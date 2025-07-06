@@ -82,7 +82,7 @@ func (c *Client) State() (*player.State, error) {
 
 	var query string
 	if artist != "" {
-		query = artist + " " + title
+		query = artist + " - " + title
 	} else {
 		query = title
 	}
