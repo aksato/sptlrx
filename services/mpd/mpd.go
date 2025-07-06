@@ -1,11 +1,25 @@
 package mpd
 
 import (
+	"regexp"
 	"github.com/raitonoberu/sptlrx/player"
 	"strconv"
 
 	"github.com/fhs/gompd/mpd"
 )
+
+// Replaces all forbidden or problematic filename characters with '-'
+func sanitizeFilename(name string) string {
+	// Replace '/' and null byte (shouldn't appear in Go strings, but for completeness)
+	name = regexp.MustCompile(`[\/\x00]`).ReplaceAllString(name, "-")
+	// Optionally, replace other problematic characters for cross-platform safety
+	name = regexp.MustCompile(`[:*?"<>|\\]`).ReplaceAllString(name, "-")
+	// Collapse multiple dashes
+	name = regexp.MustCompile(`-+`).ReplaceAllString(name, "-")
+	// Trim spaces and dashes from start/end
+	name = regexp.MustCompile(`^[\s\-\.]+|[\s\-\.]+$`).ReplaceAllString(name, "")
+	return name
+}
 
 func New(address, password string) *Client {
 	return &Client{
@@ -72,6 +86,7 @@ func (c *Client) State() (*player.State, error) {
 	} else {
 		query = title
 	}
+	query = sanitizeFilename(query)
 
 	return &player.State{
 		ID:       status["songid"],
