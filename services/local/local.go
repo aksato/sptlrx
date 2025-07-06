@@ -1,6 +1,9 @@
 package local
 
 import (
+	"errors"
+	"os/exec"
+	"regexp"
 	"bufio"
 	"fmt"
 	"github.com/raitonoberu/sptlrx/lyrics"
@@ -19,6 +22,27 @@ var replacer = strings.NewReplacer(
 	"(", "", ")", "",
 	"[", "", "]", "",
 )
+
+func processQuery() (string, error) {
+	out, err := exec.Command(
+		"mpc", "-v",
+		"--format", "*%artist% - %title%",
+		"current",
+	).CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		if strings.HasPrefix(line, "*") {
+			raw := strings.TrimPrefix(strings.TrimSpace(line), "*")
+			re := regexp.MustCompile(`[^A-Za-z0-9 .-]`)
+			safe := re.ReplaceAllString(raw, "-")
+			safe = regexp.MustCompile(`-+`).ReplaceAllString(safe, "-")
+			return strings.Trim(safe, " -"), nil
+		}
+	}
+	return "", errors.New("no starred line")
+}
 
 type file struct {
 	Path      string
@@ -39,6 +63,9 @@ type Client struct {
 }
 
 func (c *Client) Lyrics(id, query string) ([]lyrics.Line, error) {
+	if key, err := processQuery(); err == nil {
+		query = key
+	}
 	f := c.findFile(query)
 	if f == nil {
 		return nil, nil
