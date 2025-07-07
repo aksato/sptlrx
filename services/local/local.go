@@ -96,10 +96,12 @@ func parseLrcFile(reader io.Reader) []lyrics.Line {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if !strings.HasPrefix(line, "[") || len(line) < 10 {
-			continue
-		}
-		result = append(result, parseLrcLine(line))
+		if strings.HasPrefix(line, "[") && len(line) >= 10 {
+			// Check if the second character is a digit (indicating a time tag)
+			if len(line) > 1 && line[1] >= '0' && line[1] <= '9' {
+				result = append(result, parseLrcLine(line))
+			}
+    }
 	}
 	return result
 }
