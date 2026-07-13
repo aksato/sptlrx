@@ -51,7 +51,7 @@ func (c *Client) Lyrics(id, query string) ([]lyrics.Line, error) {
 	// Simple exact match using filename
 	for _, f := range c.index {
 		filename := strings.TrimSuffix(filepath.Base(f.Path), ".lrc")
-		if filename == query {
+		if replacer.Replace(filename) == replacer.Replace(query) {
 			fmt.Fprintf(c.logger, "Exact match found: %s\n", f.Path)
 
 			reader, err := os.Open(f.Path)
