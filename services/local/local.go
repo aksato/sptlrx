@@ -48,24 +48,60 @@ type Client struct {
 }
 
 func (c *Client) Lyrics(id, query string) ([]lyrics.Line, error) {
-	// Simple exact match using filename
+	// Pass 1: exact match
 	for _, f := range c.index {
 		filename := strings.TrimSuffix(filepath.Base(f.Path), ".lrc")
 		if replacer.Replace(filename) == replacer.Replace(query) {
-			fmt.Fprintf(c.logger, "Exact match found: %s\n", f.Path)
+			return c.loadFile(f, "Exact match", query)
+		}
+	}
 
-			reader, err := os.Open(f.Path)
-			if err != nil {
-				return nil, err
-			}
-			defer reader.Close()
-
-			return parseLrcFile(reader), nil
+	// Pass 2: title match + artist word subset
+	for _, f := range c.index {
+		filename := strings.TrimSuffix(filepath.Base(f.Path), ".lrc")
+		if artistSubsetMatch(filename, query) {
+			return c.loadFile(f, "Subset match", query)
 		}
 	}
 
 	fmt.Fprintf(c.logger, "No match found for: %q\n", query)
 	return nil, nil
+}
+
+func (c *Client) loadFile(f *file, matchType, query string) ([]lyrics.Line, error) {
+	fmt.Fprintf(c.logger, "%s found for %q: %s\n", matchType, query, f.Path)
+
+	reader, err := os.Open(f.Path)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+
+	return parseLrcFile(reader), nil
+}
+
+// artistSubsetMatch checks if the title matches and all words from the
+// query's artist appear somewhere in the filename's artist.
+func artistSubsetMatch(filename, query string) bool {
+	fParts := strings.SplitN(filename, " - ", 2)
+	qParts := strings.SplitN(query, " - ", 2)
+	if len(fParts) != 2 || len(qParts) != 2 {
+		return false
+	}
+
+	fArtist, fTitle := replacer.Replace(fParts[0]), replacer.Replace(fParts[1])
+	qArtist, qTitle := replacer.Replace(qParts[0]), replacer.Replace(qParts[1])
+
+	if fTitle != qTitle {
+		return false
+	}
+
+	for _, word := range strings.Fields(qArtist) {
+		if !strings.Contains(fArtist, word) {
+			return false
+		}
+	}
+	return true
 }
 
 func createIndex(folder string) ([]*file, error) {
