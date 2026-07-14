@@ -71,11 +71,11 @@ func Listen(
 			lastUpdate = now
 		}
 
-		newIndex := getIndex(state.Position, index, lines)
-		if newIndex != index {
-			changed = true
-			index = newIndex
-		}
+	newIndex := getIndex(state.Position, index, lines)
+	if newIndex > index {
+		changed = true
+		index = newIndex
+	}
 
 		if changed {
 			ch <- Update{
