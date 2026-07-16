@@ -72,7 +72,7 @@ func Listen(
 		}
 
 	newIndex := getIndex(state.Position, index, lines)
-	if newIndex > index {
+	if newIndex > index || newIndex < index-1 {
 		changed = true
 		index = newIndex
 	}
